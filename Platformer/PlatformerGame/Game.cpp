@@ -66,18 +66,18 @@ void Game::render()
 	m_window.clear();
 
 	// Draw all the platforms
-	/*for (int i = 0; i < M_NUM_OF_PLATFORMS; i++)
+	for (int i = 0; i < M_NUM_OF_PLATFORMS; i++)
 	{
 		m_window.draw(m_platforms[i]);
-	}*/
+	}
 
-	// Draw all the platforms
+	// Draw all the trail effects
 	for (int i = 0; i < M_NUM_OF_TRAILS; i++)
 	{
 		m_window.draw(m_trailEffect[i]);
 	}
 
-	m_window.draw(m_platform);
+	//m_window.draw(m_platform);
 	m_window.draw(m_player);
 	m_window.display();
 }
@@ -91,17 +91,16 @@ void Game::setupTexturesAndSprites()
 	if(!platformTexture.loadFromFile("platform.png")) { /* Error... */ }
 
 	// Setup player
-	m_player.setSize(sf::Vector2f(20, 20));
+	m_player.setSize(sf::Vector2f(20.0f, 20.0f));
 	m_player.setOrigin(m_player.getGlobalBounds().width / 2, m_player.getGlobalBounds().height / 2);
 	m_player.setPosition(sf::Vector2f(400, 300));
 
 	// Setup platforms
 	for (int i = 0; i < M_NUM_OF_PLATFORMS; i++)
 	{
-		//m_platforms[i].setTexture(platformTexture);
-		//m_platforms[i].setScale(0.3, 0.3);
-		m_platforms[i].setSize(sf::Vector2f(80.0f, 20.0f));
-		m_platforms[i].setPosition(rand() % 750, rand() % 500 + 50);
+		m_platforms[i].setSize(sf::Vector2f{ 100.0f, 20.0f });
+		//m_platforms[i].setPosition( platformPositions[i] );
+		m_platforms[i].setPosition(rand() % 800 - m_platforms[i].getGlobalBounds().width / 2, rand() % 600 - m_platforms[i].getGlobalBounds().height / 2);
 		m_platforms[i].setOrigin(m_platforms[i].getGlobalBounds().width / 2, m_platforms[i].getGlobalBounds().height / 2);
 	}
 
@@ -116,10 +115,10 @@ void Game::setupTexturesAndSprites()
 
 	
 
-	// Setup single platform
+	/*// Setup single platform
 	m_platform.setSize(sf::Vector2f{ 400.0f, 30.0f });
 	m_platform.setPosition(400.0f, 560.0f);
-	m_platform.setOrigin(m_platform.getGlobalBounds().width / 2, m_platform.getGlobalBounds().height / 2);
+	m_platform.setOrigin(m_platform.getGlobalBounds().width / 2, m_platform.getGlobalBounds().height / 2);*/
 }
 
 
@@ -141,7 +140,7 @@ void Game::update(sf::Time t_deltaTime)
 	}
 
 	// Check if on the ground
-	if (isColliding(m_player, m_platform, sf::Vector2f{ m_player.getPosition().x, m_player.getPosition().y + 1.0f }))
+	if (isColliding(m_player, sf::Vector2f{ m_player.getPosition().x, m_player.getPosition().y + 1.0f }))
 	{
 		// Jump
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
@@ -160,9 +159,9 @@ void Game::update(sf::Time t_deltaTime)
 	m_playerVelocity += m_playerAcceleration;
 
 	// Check for horisontal collisions
-	if (isColliding(m_player, m_platform, sf::Vector2f{ m_player.getPosition().x + m_playerVelocity.x, m_player.getPosition().y }))
+	if (isColliding(m_player, sf::Vector2f{ m_player.getPosition().x + m_playerVelocity.x, m_player.getPosition().y }))
 	{
-		while (!isColliding(m_player, m_platform, sf::Vector2f{ m_player.getPosition().x + signOf(m_playerVelocity.x), m_player.getPosition().y }))
+		while (!isColliding(m_player, sf::Vector2f{ m_player.getPosition().x + signOf(m_playerVelocity.x), m_player.getPosition().y }))
 		{
 			m_player.move(signOf(m_playerVelocity.x), 0.0f);
 		}
@@ -174,26 +173,41 @@ void Game::update(sf::Time t_deltaTime)
 	}
 
 	// Check for vertical collisions
-	if (isColliding(m_player, m_platform, sf::Vector2f{ m_player.getPosition().x, m_player.getPosition().y + m_playerVelocity.y }))
+	if (isColliding(m_player, sf::Vector2f{ m_player.getPosition().x, m_player.getPosition().y + m_playerVelocity.y }))
 	{
-		while (!isColliding(m_player, m_platform, sf::Vector2f{ m_player.getPosition().x, m_player.getPosition().y + signOf(m_playerVelocity.y) }))
+		while (!isColliding(m_player, sf::Vector2f{ m_player.getPosition().x, m_player.getPosition().y + signOf(m_playerVelocity.y) }))
 		{
 			m_player.move(0.0f, signOf(m_playerVelocity.y));
 		}
 		m_playerVelocity.y = 0.0f;
+
+		// Set the bool for hitting the ground
+		if (!m_onGround)
+		{
+			m_hitGround = true;
+		}
 	}
 	else
 	{
 		m_player.move(0.0f, m_playerVelocity.y);
 	}
 
+	// Apply the trail effect
 	m_trailEffect[m_trailNum].setSize(sf::Vector2f(M_NUM_OF_TRAILS, M_NUM_OF_TRAILS));
 	m_trailEffect[m_trailNum].setOrigin(m_trailEffect[m_trailNum].getGlobalBounds().width / 2, m_trailEffect[m_trailNum].getGlobalBounds().height / 2);
 	m_trailEffect[m_trailNum].setPosition(m_player.getPosition());
+
+	if (m_hitGround)
+	{
+		m_trailEffect[m_trailNum].setPosition(m_player.getPosition() + sf::Vector2f{ static_cast<float>(rand() % 60 - 30), static_cast<float>(rand() % 30) });
+	}
+
 	m_trailNum++;
+
 	if (m_trailNum >= M_NUM_OF_TRAILS)
 	{
 		m_trailNum = 0;
+		m_hitGround = false;
 	}
 
 	// change the size of the trails trail effect
@@ -230,25 +244,29 @@ float Game::signOf(float t_value)
 	return sign;
 }
 
-bool Game::isColliding(sf::RectangleShape t_subjectOne, sf::RectangleShape t_subjectTwo, sf::Vector2f t_position)
+bool Game::isColliding(sf::RectangleShape t_subjectOne, sf::Vector2f t_position)
 {
 	// Set the bool
 	bool colliding = false;
 
-	// Get the distance vector
-	sf::Vector2f distanceVector = t_position - t_subjectTwo.getPosition();
-
-	// Get the X and Y distance values
-	float xDistance = sqrt(distanceVector.x * distanceVector.x);
-	float yDistance = sqrt(distanceVector.y * distanceVector.y);
-
-	// Check horisontal collisions
-	if (xDistance < t_subjectOne.getGlobalBounds().width / 2 + t_subjectTwo.getGlobalBounds().width / 2)
+	for (int i = 0; i < M_NUM_OF_PLATFORMS; i++)
 	{
-		// Check vertical collisions
-		if (yDistance < t_subjectOne.getGlobalBounds().height / 2 + t_subjectTwo.getGlobalBounds().height / 2)
+		// Get the distance vector
+		sf::Vector2f distanceVector = t_position - m_platforms[i].getPosition();
+
+		// Get the X and Y distance values
+		float xDistance = sqrt(distanceVector.x * distanceVector.x);
+		float yDistance = sqrt(distanceVector.y * distanceVector.y);
+
+		// Check horisontal collisions
+		if (xDistance < t_subjectOne.getGlobalBounds().width / 2 + m_platforms[i].getGlobalBounds().width / 2)
 		{
-			colliding = true;
+			// Check vertical collisions
+			if (yDistance < t_subjectOne.getGlobalBounds().height / 2 + m_platforms[i].getGlobalBounds().height / 2)
+			{
+				colliding = true;
+				break;
+			}
 		}
 	}
 
